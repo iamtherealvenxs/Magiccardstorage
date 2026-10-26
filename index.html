@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>คลังการ์ดเมจิกของฉัน</title>
+<style>
+:root{--bg:#f2f4f8;--fg:#1b1d24;--mut:#5f6675;--card:#fff;--line:#d6dbe5;--acc:#2f45c4;--accfg:#fff;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#14161c;--fg:#e8eaf0;--mut:#98a0b3;--card:#1e212a;--line:#2f3340;--acc:#8d9dff;--accfg:#10131f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "Noto Sans Thai",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+input,select,button,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.sw{position:relative;flex:1;min-width:200px}.sw input{width:100%}
+#sug{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:8px;margin-top:2px;display:none;max-height:280px;overflow:auto}
+#sug div{padding:10px;cursor:pointer}#sug div:hover,#sug .h{background:var(--bg)}
+button{cursor:pointer}
+.chip{padding:6px 12px;border-radius:99px}
+.chip.on{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+button.go{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+#msg{min-height:1.5em;color:var(--mut);margin-top:6px}
+#stat{color:var(--mut);margin:12px 0 6px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.c{position:relative;background:none;border:0;padding:0;text-align:left}
+.c img{width:100%;border-radius:5%;display:block;background:var(--line);aspect-ratio:488/680}
+.c i{position:absolute;top:6px;right:6px;background:var(--acc);color:var(--accfg);font-style:normal;font-weight:700;font-size:.85rem;border-radius:99px;padding:0 8px}
+.c span{display:block;font-size:.8rem;margin-top:4px;color:var(--mut)}
+details summary{cursor:pointer;color:var(--mut)}
+textarea{width:100%;min-height:90px;margin-top:8px}
+dialog{max-width:640px;width:94%;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);padding:16px}
+dialog::backdrop{background:#0008}
+.d{display:flex;gap:16px;flex-wrap:wrap}.d img{width:240px;max-width:100%;border-radius:5%}.d>div{flex:1;min-width:200px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<h1>คลังการ์ดเมจิกของฉัน</h1>
+<div style="color:var(--mut);font-size:.9rem">พิมพ์ชื่อ 3 ตัวอักษรขึ้นไป แล้วเลือกจากรายการเพื่อเพิ่มเข้าคลัง</div>
+
+<div class="box">
+  <div class="row" style="margin-top:0">
+    <div class="sw"><input id="q" placeholder="เช่น lig… แล้วเลือก Lightning Bolt" autocomplete="off"><div id="sug"></div></div>
+    <label style="display:flex;gap:6px;align-items:center;color:var(--mut)">จำนวน <input id="qty" type="number" min="1" value="1" inputmode="numeric" style="width:80px"></label>
+  </div>
+  <div id="msg"></div>
+  <details style="margin-top:8px"><summary>เพิ่มทีละหลายใบ (วางรายการ)</summary>
+    <textarea id="bulk" placeholder="หนึ่งบรรทัดต่อการ์ด เช่น&#10;4 Lightning Bolt&#10;2 Counterspell&#10;Sol Ring"></textarea>
+    <div class="row"><button class="go" id="bgo">เพิ่มทั้งหมด</button></div>
+  </details>
+</div>
+
+<div class="box">
+  <div class="row" style="margin-top:0" id="cf"></div>
+  <div class="row" id="tf"></div>
+  <div class="row">
+    <input id="fq" placeholder="ค้นในคลังของฉัน" style="flex:1;min-width:140px">
+    <select id="so"><option value="name">เรียงตามชื่อ</option><option value="cmc">ค่ามานา</option><option value="added">เพิ่มล่าสุด</option><option value="usd">ราคา</option></select>
+  </div>
+</div>
+
+<div id="stat"></div>
+<div id="grid"></div>
+
+<div class="box">
+  <details><summary>สำรองข้อมูล / ย้ายเครื่อง</summary>
+    <div class="row">
+      <button id="exp">ดาวน์โหลดสำรอง (JSON)</button>
+      <button id="cp">คัดลอกเป็นรายการข้อความ</button>
+      <button id="imp">นำเข้าไฟล์สำรอง</button>
+      <button id="clr">ล้างคลังทั้งหมด</button>
+      <input id="file" type="file" accept=".json" hidden>
+    </div>
+    <div style="color:var(--mut);font-size:.85rem;margin-top:6px">ข้อมูลเก็บในเบราว์เซอร์ของเครื่องนี้ ถ้าเปลี่ยนเครื่องให้ดาวน์โหลดไฟล์สำรองไปนำเข้า</div>
+  </details>
+</div>
+<dialog id="dlg"></dialog>
+<p style="color:var(--mut);font-size:.8rem">ข้อมูลการ์ดจาก Scryfall API</p>
+</main>
+<script>
+const $=s=>document.querySelector(s),enc=encodeURIComponent,KEY='mtg-collection-v1';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let col={};try{col=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(col))}catch(e){msg('บันทึกในเบราว์เซอร์ไม่ได้ (อาจอยู่ในโหมดส่วนตัว)')}};
+const msg=t=>$('#msg').textContent=t;
+async function api(p,o){const r=await fetch('https://api.scryfall.com'+p,o);const j=await r.json();if(!r.ok)throw j;return j}
+const slim=c=>{const f=c.card_faces&&!c.image_uris?c.card_faces[0]:c;const u=f.image_uris||{};
+  return{id:c.id,name:c.name,ci:c.color_identity||[],type:c.type_line||'',cmc:c.cmc||0,rarity:c.rarity,set:c.set_name,small:u.small||'',norm:u.normal||'',usd:parseFloat(c.prices?.usd||0),uri:c.scryfall_uri,qty:0,added:0}};
+function add(c,n=1){const k=c.name;if(!col[k])col[k]={...slim(c),added:Date.now()};col[k].qty+=n;save();render()}
+
+/* autocomplete */
+let t,items=[],hi=-1;
+const sug=$('#sug');
+function showSug(){sug.innerHTML='';items.forEach((n,i)=>{const d=document.createElement('div');d.textContent=n;if(i===hi)d.className='h';d.onclick=()=>pick(n);sug.append(d)});sug.style.display=items.length?'block':'none'}
+async function pick(name){sug.style.display='none';$('#q').value='';items=[];msg('กำลังเพิ่ม…');
+  const n=Math.max(1,parseInt($('#qty').value)||1);
+  try{const c=await api('/cards/named?exact='+enc(name));add(c,n);$('#qty').value=1;msg(`เพิ่ม ${c.name} ${n} ใบแล้ว (รวมมี ${col[c.name].qty} ใบ)`)}catch(e){msg('เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง')}
+  $('#q').focus()}
+$('#q').oninput=()=>{clearTimeout(t);const v=$('#q').value.trim();hi=-1;
+  if(v.length<3){items=[];showSug();return}
+  t=setTimeout(async()=>{try{items=(await api('/cards/autocomplete?q='+enc(v))).data.slice(0,8);showSug()}catch(e){}},200)};
+$('#q').onkeydown=e=>{
+  if(e.key==='ArrowDown'){hi=Math.min(hi+1,items.length-1);showSug();e.preventDefault()}
+  else if(e.key==='ArrowUp'){hi=Math.max(hi-1,0);showSug();e.preventDefault()}
+  else if(e.key==='Enter'&&items.length)pick(items[Math.max(hi,0)])};
+document.addEventListener('click',e=>{if(!e.target.closest('.sw'))sug.style.display='none'});
+
+/* bulk */
+$('#bgo').onclick=async()=>{
+  const lines=$('#bulk').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  const want=lines.map(l=>{const m=l.match(/^(\d+)\s*x?\s+(.+)$/i);return m?{n:+m[1],name:m[2].replace(/\s*\(.*$/,'')}:{n:1,name:l}});
+  if(!want.length)return;let miss=[],ok=0;msg('กำลังเพิ่ม…');
+  for(let i=0;i<want.length;i+=75){
+    const part=want.slice(i,i+75);
+    try{const j=await api('/cards/collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiers:part.map(p=>({name:p.name}))})});
+      j.data.forEach(c=>{const w=part.find(p=>p.name.toLowerCase()===c.name.toLowerCase()||c.name.toLowerCase().startsWith(p.name.toLowerCase()+' //'));add(c,w?w.n:1);ok++});
+      (j.not_found||[]).forEach(x=>miss.push(x.name))}catch(e){part.forEach(p=>miss.push(p.name))}}
+  msg(`เพิ่มแล้ว ${ok} รายการ`+(miss.length?` · ไม่พบ: ${miss.join(', ')}`:''));if(!miss.length)$('#bulk').value=''};
+
+/* filters */
+const CF=[['all','ทั้งหมด'],['W','ขาว'],['U','น้ำเงิน'],['B','ดำ'],['R','แดง'],['G','เขียว'],['M','หลายสี'],['C','ไร้สี']];
+const TF=[['all','ทุกประเภท'],['Creature','สิ่งมีชีวิต'],['Instant','Instant'],['Sorcery','Sorcery'],['Artifact','Artifact'],['Enchantment','Enchantment'],['Land','ที่ดิน'],['Planeswalker','Planeswalker']];
+let cs='all',ts='all';
+function chips(id,list,get,set){const el=$(id);el.innerHTML='';list.forEach(([k,n])=>{const b=document.createElement('button');b.className='chip'+(get()===k?' on':'');b.textContent=n;b.onclick=()=>{set(k);render()};el.append(b)})}
+const matchC=c=>cs==='all'||(cs==='M'?c.ci.length>1:cs==='C'?c.ci.length===0:c.ci.length===1&&c.ci[0]===cs);
+function render(){
+  chips('#cf',CF,()=>cs,k=>cs=k);chips('#tf',TF,()=>ts,k=>ts=k);
+  const q=$('#fq').value.trim().toLowerCase(),so=$('#so').value;
+  let list=Object.values(col).filter(c=>matchC(c)&&(ts==='all'||c.type.includes(ts))&&(!q||c.name.toLowerCase().includes(q)||c.type.toLowerCase().includes(q)));
+  list.sort((a,b)=>so==='name'?a.name.localeCompare(b.name):so==='cmc'?a.cmc-b.cmc||a.name.localeCompare(b.name):so==='added'?b.added-a.added:b.usd-a.usd);
+  const all=Object.values(col),tot=all.reduce((s,c)=>s+c.qty,0),val=all.reduce((s,c)=>s+c.qty*c.usd,0);
+  $('#stat').textContent=all.length?`แสดง ${list.length} ชื่อ จากทั้งหมด ${all.length} ชื่อ · รวม ${tot} ใบ · มูลค่าโดยประมาณ $${val.toFixed(2)}`:'ยังไม่มีการ์ด เริ่มพิมพ์ชื่อในช่องด้านบนได้เลย';
+  const g=$('#grid');g.innerHTML='';
+  list.forEach(c=>{const b=document.createElement('button');b.className='c';
+    b.innerHTML=`<img loading="lazy" alt="${esc(c.name)}" src="${c.small}"><i>×${c.qty}</i><span>${esc(c.name)}</span>`;
+    b.onclick=()=>detail(c.name);g.append(b)})}
+$('#fq').oninput=render;$('#so').onchange=render;
+
+function detail(k){const c=col[k];if(!c)return;
+  $('#dlg').innerHTML=`<div class="d"><img src="${c.norm}" alt="${esc(c.name)}"><div><b>${esc(c.name)}</b><br>${esc(c.type)}<p>${esc(c.set)} · ${esc(c.rarity)}<br>ราคา: ${c.usd?'$'+c.usd:'—'}</p>
+  <div class="row"><button id="m">−</button><b>มี ${c.qty} ใบ</b><button id="p">+</button></div>
+  <p><a href="${esc(c.uri)}" target="_blank" rel="noopener">เปิดใน Scryfall</a></p>
+  <div class="row"><button id="rm">ลบออกจากคลัง</button><button onclick="dlg.close()">ปิด</button></div></div></div>`;
+  $('#dlg').showModal();
+  $('#p').onclick=()=>{c.qty++;save();render();detail(k)};
+  $('#m').onclick=()=>{c.qty--;if(c.qty<1){delete col[k];$('#dlg').close()}else detail(k);save();render()};
+  $('#rm').onclick=()=>{delete col[k];save();render();$('#dlg').close()}}
+$('#dlg').onclick=e=>{if(e.target.id==='dlg')e.target.close()};
+
+/* backup */
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(col)],{type:'application/json'}));a.download='mtg-collection.json';a.click()};
+$('#cp').onclick=async()=>{const t=Object.values(col).sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`${c.qty} ${c.name}`).join('\n');try{await navigator.clipboard.writeText(t);msg('คัดลอกรายการแล้ว')}catch(e){$('#bulk').value=t;msg('คัดลอกอัตโนมัติไม่ได้ วางรายการไว้ในช่อง “เพิ่มทีละหลายใบ” ให้แล้ว')}};
+$('#imp').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());Object.entries(j).forEach(([k,v])=>{col[k]?col[k].qty+=v.qty:col[k]=v});save();render();msg('นำเข้าแล้ว')}catch(x){msg('ไฟล์ไม่ถูกต้อง')}};
+$('#clr').onclick=()=>{if(confirm('ล้างคลังทั้งหมด? ย้อนกลับไม่ได้')){col={};save();render()}};
+render();
+</script>
+</body>
+</html>
