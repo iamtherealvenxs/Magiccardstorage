@@ -28,6 +28,7 @@ button.go{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-
 .c img{width:100%;border-radius:5%;display:block;background:var(--line);aspect-ratio:488/680}
 .c i{position:absolute;top:6px;right:6px;background:var(--acc);color:var(--accfg);font-style:normal;font-weight:700;font-size:.85rem;border-radius:99px;padding:0 8px}
 .c span{display:block;font-size:.8rem;margin-top:4px;color:var(--mut)}
+img.ms{height:15px;width:15px;vertical-align:-3px;margin-right:2px}
 details summary{cursor:pointer;color:var(--mut)}
 textarea{width:100%;min-height:90px;margin-top:8px}
 dialog{max-width:640px;width:94%;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);padding:16px}
@@ -89,7 +90,13 @@ const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(col))}catch(e){msg('
 const msg=t=>$('#msg').textContent=t;
 async function api(p,o){const r=await fetch('https://api.scryfall.com'+p,o);const j=await r.json();if(!r.ok)throw j;return j}
 const slim=c=>{const f=c.card_faces&&!c.image_uris?c.card_faces[0]:c;const u=f.image_uris||{};
-  return{id:c.id,name:c.name,ci:c.color_identity||[],type:c.type_line||'',cmc:c.cmc||0,rarity:c.rarity,set:c.set_name,small:u.small||'',norm:u.normal||'',usd:parseFloat(c.prices?.usd||0),uri:c.scryfall_uri,qty:0,added:0}};
+  return{id:c.id,name:c.name,mc:c.mana_cost||(c.card_faces||[]).map(x=>x.mana_cost).filter(Boolean).join(' // '),ci:c.color_identity||[],type:c.type_line||'',cmc:c.cmc||0,rarity:c.rarity,set:c.set_name,small:u.small||'',norm:u.normal||'',usd:parseFloat(c.prices?.usd||0),uri:c.scryfall_uri,qty:0,added:0}};
+const sym=mc=>mc?mc.replace(/\{([^}]+)\}/g,(m,s)=>`<img class="ms" alt="${esc(m)}" src="https://svgs.scryfall.io/card-symbols/${s.replace('/','')}.svg">`):'';
+async function backfill(){
+  const miss=Object.values(col).filter(c=>c.mc===undefined);
+  for(let i=0;i<miss.length;i+=75){
+    try{const j=await api('/cards/collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiers:miss.slice(i,i+75).map(c=>({name:c.name}))})});
+      j.data.forEach(d=>{if(col[d.name])col[d.name].mc=slim(d).mc});save();render()}catch(e){break}}}
 function add(c,n=1){const k=c.name;if(!col[k])col[k]={...slim(c),added:Date.now()};col[k].qty+=n;save();render()}
 
 /* autocomplete */
@@ -136,12 +143,12 @@ function render(){
   $('#stat').textContent=all.length?`แสดง ${list.length} ชื่อ จากทั้งหมด ${all.length} ชื่อ · รวม ${tot} ใบ · มูลค่าโดยประมาณ $${val.toFixed(2)}`:'ยังไม่มีการ์ด เริ่มพิมพ์ชื่อในช่องด้านบนได้เลย';
   const g=$('#grid');g.innerHTML='';
   list.forEach(c=>{const b=document.createElement('button');b.className='c';
-    b.innerHTML=`<img loading="lazy" alt="${esc(c.name)}" src="${c.small}"><i>×${c.qty}</i><span>${esc(c.name)}</span>`;
+    b.innerHTML=`<img loading="lazy" alt="${esc(c.name)}" src="${c.small}"><i>×${c.qty}</i><span>${esc(c.name)}<br>${sym(c.mc)}</span>`;
     b.onclick=()=>detail(c.name);g.append(b)})}
 $('#fq').oninput=render;$('#so').onchange=render;
 
 function detail(k){const c=col[k];if(!c)return;
-  $('#dlg').innerHTML=`<div class="d"><img src="${c.norm}" alt="${esc(c.name)}"><div><b>${esc(c.name)}</b><br>${esc(c.type)}<p>${esc(c.set)} · ${esc(c.rarity)}<br>ราคา: ${c.usd?'$'+c.usd:'—'}</p>
+  $('#dlg').innerHTML=`<div class="d"><img src="${c.norm}" alt="${esc(c.name)}"><div><b>${esc(c.name)}</b> ${sym(c.mc)}<br>${esc(c.type)}<p>ค่ามานา: ${c.cmc}<br>${esc(c.set)} · ${esc(c.rarity)}<br>ราคา: ${c.usd?'$'+c.usd:'—'}</p>
   <div class="row"><button id="m">−</button><b>มี ${c.qty} ใบ</b><button id="p">+</button></div>
   <p><a href="${esc(c.uri)}" target="_blank" rel="noopener">เปิดใน Scryfall</a></p>
   <div class="row"><button id="rm">ลบออกจากคลัง</button><button onclick="dlg.close()">ปิด</button></div></div></div>`;
@@ -154,15 +161,15 @@ $('#dlg').onclick=e=>{if(e.target.id==='dlg')e.target.close()};
 /* backup */
 $('#xls').onclick=()=>{
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',CN={W:'ขาว',U:'น้ำเงิน',B:'ดำ',R:'แดง',G:'เขียว'};
-  const rows=[['ชื่อการ์ด','จำนวน','สี','ประเภท','ค่ามานา','ความหายาก','ชุด','ราคา (USD)','ราคารวม (USD)']];
-  Object.values(col).sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>rows.push([c.name,c.qty,c.ci.map(x=>CN[x]).join('/')||'ไร้สี',c.type,c.cmc,c.rarity,c.set,c.usd||'',c.usd?(c.usd*c.qty).toFixed(2):'']));
+  const rows=[['ชื่อการ์ด','จำนวน','สี','ประเภท','มานาคอสต์','ค่ามานา','ความหายาก','ชุด','ราคา (USD)','ราคารวม (USD)']];
+  Object.values(col).sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>rows.push([c.name,c.qty,c.ci.map(x=>CN[x]).join('/')||'ไร้สี',c.type,c.mc||'',c.cmc,c.rarity,c.set,c.usd||'',c.usd?(c.usd*c.qty).toFixed(2):'']));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='mtg-collection.csv';a.click()};
 $('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(col)],{type:'application/json'}));a.download='mtg-collection.json';a.click()};
 $('#cp').onclick=async()=>{const t=Object.values(col).sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`${c.qty} ${c.name}`).join('\n');try{await navigator.clipboard.writeText(t);msg('คัดลอกรายการแล้ว')}catch(e){$('#bulk').value=t;msg('คัดลอกอัตโนมัติไม่ได้ วางรายการไว้ในช่อง “เพิ่มทีละหลายใบ” ให้แล้ว')}};
 $('#imp').onclick=()=>$('#file').click();
 $('#file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());Object.entries(j).forEach(([k,v])=>{col[k]?col[k].qty+=v.qty:col[k]=v});save();render();msg('นำเข้าแล้ว')}catch(x){msg('ไฟล์ไม่ถูกต้อง')}};
 $('#clr').onclick=()=>{if(confirm('ล้างคลังทั้งหมด? ย้อนกลับไม่ได้')){col={};save();render()}};
-render();
+render();backfill();
 </script>
 </body>
 </html>
